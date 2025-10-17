@@ -3,14 +3,31 @@ const BASE = 'http://10.0.11.2:5127/api';
 async function request(path, options = {}) {
     const url = `${BASE}${path}`;
     try {
-        const res = await fetch(url, Object.assign({ headers: { 'Content-Type': 'application/json' } }, options));
+        console.log('API Request:', { url, method: options.method, body: options.body });
+        const res = await fetch(url, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                ...options.headers
+            }
+        });
+        
+        const text = await res.text();
+        console.log('API Response:', { status: res.status, text });
+        
         if (!res.ok) {
-            const text = await res.text().catch(() => '');
             throw new Error(`HTTP ${res.status} ${res.statusText} - ${text}`);
         }
+        
         if (res.status === 204) return null;
-        const data = await res.json().catch(() => null);
-        return data;
+        
+        try {
+            return text ? JSON.parse(text) : null;
+        } catch (e) {
+            console.warn('Response no es JSON válido:', text);
+            return null;
+        }
     } catch (err) {
         console.error('API request error', { url, options, err });
         throw err;

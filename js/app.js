@@ -480,14 +480,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function addOperator(operatorData) {
         try {
+            const payload = {
+                name: operatorData.name,
+                email: operatorData.email,
+                password: operatorData.password,
+                isActive: true
+            };
+            console.log('Enviando operador:', payload);
+            
             if (window.editingOperatorId) {
-                await api.updateOperator(window.editingOperatorId, operatorData);
+                await api.updateOperator(window.editingOperatorId, payload);
                 window.editingOperatorId = null;
             } else {
-                await api.createOperator(operatorData);
+                await api.createOperator(payload);
             }
         } catch (e) {
-            throw e;
+            console.error('Error detallado:', e);
+            throw new Error('No se pudo guardar el operador: ' + e.message);
         }
     }
 
