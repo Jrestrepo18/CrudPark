@@ -1,4 +1,5 @@
 import { checkExpiringMemberships } from './membershipNotifications.js';
+import * as api from './api.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Configurar verificación diaria de mensualidades por vencer
@@ -412,5 +413,94 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CARGA INICIAL ---
     renderView('dashboard');
+
+    // --- OPERADORES: integración con backend ---
+    async function handleOperatorsView() {
+        const tbody = document.querySelector('#operators-table tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">Cargando operadores...</td></tr>';
+        try {
+            const operators = await api.getOperators();
+            if (!operators || operators.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No hay operadores.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = '';
+            operators.forEach(op => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-4">${op.name || ''}</td>
+                    <td class="p-4">${op.email || ''}</td>
+                    <td class="p-4">${op.isActive ? 'Activo' : 'Inactivo'}</td>
+                    <td class="p-4 text-right">
+                        <button class="edit-operator mr-2 px-3 py-1 bg-yellow-300 rounded" data-id="${op.id}">Editar</button>
+                        <button class="delete-operator px-3 py-1 bg-red-500 text-white rounded" data-id="${op.id}">Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            tbody.querySelectorAll('.edit-operator').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.dataset.id;
+                    try {
+                        const data = await api.getOperator(id);
+                        const form = document.getElementById('operator-form');
+                        form.querySelector('#name').value = data.name || '';
+                        form.querySelector('#email').value = data.email || '';
+                        // no rellenamos contraseña por seguridad
+                        window.editingOperatorId = id;
+                        document.getElementById('modal-operator').classList.remove('hidden');
+                    } catch (err) {
+                        console.error('Error obteniendo operador:', err);
+                        alert('No se pudo cargar el operador');
+                    }
+                });
+            });
+
+            tbody.querySelectorAll('.delete-operator').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.dataset.id;
+                    if (!confirm('¿Eliminar este operador?')) return;
+                    try {
+                        await api.deleteOperator(id);
+                        await handleOperatorsView();
+                    } catch (err) {
+                        console.error('Error al eliminar operador:', err);
+                        alert('No se pudo eliminar el operador');
+                    }
+                });
+            });
+
+        } catch (err) {
+            console.error('Error cargando operadores:', err);
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Error al cargar operadores</td></tr>';
+        }
+    }
+
+    async function addOperator(operatorData) {
+        try {
+            if (window.editingOperatorId) {
+                await api.updateOperator(window.editingOperatorId, operatorData);
+                window.editingOperatorId = null;
+            } else {
+                await api.createOperator(operatorData);
+            }
+        } catch (e) {
+            throw e;
+        }
+    }
+
+    // Asegurar que el botón de "Nuevo Operador" limpia el estado de edición
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        if (btn.textContent.includes('Nuevo Operador')) {
+            window.editingOperatorId = null;
+            const form = document.getElementById('operator-form');
+            form?.reset();
+        }
+    });
+
 });
 
