@@ -1,13 +1,8 @@
 import * as api from './api.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // NOTA: La verificación diaria de mensualidades se ha movido al backend (servidor)
-    // para garantizar su ejecución fiable a través de un Cron Job.
-    // El código de 'setInterval' ha sido eliminado de este archivo.
-
     const mainContent = document.getElementById('main-content');
 
-    // Objeto 'views' con todas las vistas HTML
     const views = {
         dashboard: `
             <header class="flex justify-between items-center pb-6 border-b">
@@ -195,7 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Limpiar gráficos anteriores si existen
                 if (window.weeklyChart) window.weeklyChart.destroy();
                 if (window.occupancyChart) window.occupancyChart.destroy();
-              
                 const weeklyCtx = document.getElementById('weeklyRevenueChart')?.getContext('2d');
                 if (weeklyCtx && data.ingresosSemana && window.Chart) {
                     window.weeklyChart = new Chart(weeklyCtx, {
@@ -218,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const occupancyCtx = document.getElementById('occupancyTypeChart')?.getContext('2d');
                 if (occupancyCtx && data.ocupacion && window.Chart) {
-                       window.occupancyChart = new Chart(occupancyCtx, {
+                    window.occupancyChart = new Chart(occupancyCtx, {
                         type: 'doughnut',
                         data: {
                             labels: data.ocupacion.map(item => item.tipo_vehiculo),
@@ -227,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444'],
                             }]
                         },
-                         options: { responsive: true, maintainAspectRatio: false }
+                        options: { responsive: true, maintainAspectRatio: false }
                     });
                 }
 
@@ -242,7 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
 
-    // --- MANEJADORES DE MODALES ---
     const openModal = (modalId) => {
         const modal = document.getElementById(modalId);
         if(modal) {
@@ -453,7 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } catch (err) {
                         console.error('Error al cambiar estado de la mensualidad:', err);
                         e.target.checked = !newStatus;
-                         span.textContent = !newStatus ? 'Activa' : 'Inactiva';
+                        span.textContent = !newStatus ? 'Activa' : 'Inactiva';
                         alert('No se pudo cambiar el estado de la mensualidad.');
                     }
                 });
@@ -625,7 +618,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('export-excel')?.addEventListener('click', api.exportExcel);
     }
 
-    // --- MANEJADOR DE VISTAS (Router principal) ---
     const renderView = (viewName) => {
         mainContent.innerHTML = views[viewName] || `<p>Vista no encontrada.</p>`;
 
@@ -674,7 +666,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- INICIALIZACIÓN Y MANEJADORES DE FORMULARIOS GLOBALES ---
     initializeModalHandlers(); 
 
     // Manejador del formulario de operador (Crear/Editar)
@@ -718,7 +709,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Manejador del formulario de mensualidad (Crear/Editar)
     const membershipForm = document.getElementById('membership-form');
     if (membershipForm) {
         membershipForm.addEventListener('submit', async (e) => {
@@ -743,7 +733,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     };
                     await api.updateMembership(window.editingMembershipId, membershipData);
                 } else {
-                     const membershipData = {
+                    const membershipData = {
                         nombre_cliente: membershipForm.querySelector('#clientName').value,
                         correo: membershipForm.querySelector('#clientEmail').value,
                         placa: membershipForm.querySelector('#vehiclePlate').value.toUpperCase(),
@@ -768,7 +758,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- NAVEGACIÓN Y CARGA INICIAL ---
     document.querySelectorAll('#main-nav a').forEach(link => {
         link.addEventListener('click', (event) => {
             event.preventDefault();
@@ -776,7 +765,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Carga inicial
     renderView('dashboard');
 });
 
