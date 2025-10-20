@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CrudPark Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,7 +12,7 @@
     <link rel="stylesheet" href="/css/style.css">
     
     <style>
-    
+    /* ... (tus estilos) ... */
     </style>
 </head>
 <body class="bg-gray-100 transition-colors duration-200">
@@ -25,7 +24,6 @@
                 </svg>
                 CrudPark <span class="text-sm font-normal text-gray-500">Admin</span>
             </div>
-            <!-- theme toggle removed -->
             <nav id="main-nav" class="flex-1 px-4 py-4">
                 <a href="#" data-view="dashboard" class="flex items-center px-4 py-2 text-gray-700 rounded-md hover:bg-parking-50 transition-colors duration-150">
                     <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
@@ -51,69 +49,14 @@
         </aside>
 
         <main id="main-content" class="flex-1 p-8 overflow-y-auto bg-gray-100 transition-colors duration-200">
-            <div class="text-gray-700">
-                <h1 class="text-2xl font-bold">Dashboard Principal</h1>
-                <p class="text-sm text-gray-500 mt-1">jueves, 16 de octubre de 2025</p>
-
-                <!-- Filtro por fechas -->
-                <div class="mt-4 mb-6 p-4 bg-white rounded-lg shadow-sm flex items-center gap-3">
-                    <label class="text-sm text-gray-600">Desde:</label>
-                    <input type="date" id="filter-start" class="border rounded px-2 py-1">
-                    <label class="text-sm text-gray-600">Hasta:</label>
-                    <input type="date" id="filter-end" class="border rounded px-2 py-1">
-                    <button id="filter-btn" class="ml-2 px-4 py-1 bg-indigo-600 text-white rounded">Filtrar</button>
-                    <button id="clear-filter" class="ml-2 px-3 py-1 bg-gray-200 rounded">Limpiar</button>
-                </div>
-
-                <div id="filter-results" class="mb-6"></div>
-
-                <div class="flex gap-4 mb-8 mt-6">
-                    <!-- Card de Disponibilidad -->
-                    <div class="flex-1 p-6 bg-white rounded-lg shadow-md">
-                        <h2 class="text-lg font-semibold text-gray-800 mb-2">Espacios Disponibles</h2>
-                        <div class="grid grid-cols-3 gap-4">
-                            <div class="text-center">
-                                <div class="text-3xl font-bold text-parking-600">15</div>
-                                <div class="text-sm text-gray-500">Automóviles</div>
-                            </div>
-                            <div class="text-center">
-                                <div class="text-3xl font-bold text-parking-600">8</div>
-                                <div class="text-sm text-gray-500">Motos</div>
-                            </div>
-                            <div class="text-center">
-                                <div class="text-3xl font-bold text-parking-600">3</div>
-                                <div class="text-sm text-gray-500">Especiales</div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Card de Estado Actual -->
-                    <div class="flex-1 p-6 bg-white rounded-lg shadow-md">
-                        <h2 class="text-lg font-semibold text-gray-800 mb-2">Estado Actual</h2>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="text-center">
-                                <div class="text-3xl font-bold text-green-600">42</div>
-                                <div class="text-sm text-gray-500">Vehículos Dentro</div>
-                            </div>
-                            <div class="text-center">
-                                <div class="text-3xl font-bold text-parking-600">85%</div>
-                                <div class="text-sm text-gray-500">Ocupación</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-6">
-                    <p class="text-gray-500">Si este mensaje persiste, por favor recargue la página.</p>
-                </div>
-            </div>
-        </main>
+            </main>
     </div>
 
     <div id="modal-operator" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 modal-overlay backdrop-blur-sm">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md modal-content transform scale-95">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md modal-content transform scale-95 transition-transform duration-300">
             <form id="operator-form">
                 <div class="flex justify-between items-center p-6 border-b">
-                    <h3 class="text-2xl font-semibold text-gray-800">Nuevo Operador</h3>
+                    <h3 class="text-2xl font-semibold text-gray-800" id="operator-modal-title">Nuevo Operador</h3>
                     <button type="button" class="text-gray-400 hover:text-gray-600 modal-close">&times;</button>
                 </div>
                 <div class="p-6 space-y-4">
@@ -125,53 +68,62 @@
                         <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
                         <input type="email" name="email" id="email" required class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
                     </div>
+                    
                     <div>
-                        <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
-                        <input type="password" name="password" id="password" required class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                        <label for="activo" class="flex items-center cursor-pointer">
+                            <input type="checkbox" name="activo" id="activo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <span class="ml-2 text-sm font-medium text-gray-700">Operador Activo</span>
+                        </label>
                     </div>
+
                 </div>
-            <div class="px-6 py-4 bg-gray-50 text-right">
-                <button type="button" class="mr-2 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 modal-close">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700">Crear Operador</button>
+                <div class="px-6 py-4 bg-gray-50 text-right">
+                    <button type="button" class="mr-2 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 modal-close">Cancelar</button>
+                    <button type="submit" id="operator-submit-button" class="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">Crear Operador</button>
                 </div>
             </form>
         </div>
     </div>
 
     <div id="modal-membership" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 modal-overlay backdrop-blur-sm">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-md modal-content transform scale-95">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg modal-content transform scale-95 transition-transform duration-300">
             <form id="membership-form">
                 <div class="flex justify-between items-center p-6 border-b">
-                    <h3 class="text-2xl font-semibold text-gray-800">Nueva Mensualidad</h3>
+                    <h3 class="text-2xl font-semibold text-gray-800" id="membership-modal-title">Nueva Mensualidad</h3>
                     <button type="button" class="text-gray-400 hover:text-gray-600 modal-close">&times;</button>
                 </div>
-                <div class="p-6 space-y-4">
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="clientName" class="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
-                        <input type="text" name="clientName" id="clientName" required class="mt-1 focus:ring-parking-500 focus:border-parking-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                    </div>
-                    <div>
-                        <label for="clientEmail" class="block text-sm font-medium text-gray-700">Email del Cliente</label>
-                        <input type="email" name="clientEmail" id="clientEmail" required class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                        <label for="clientName" class="block text-sm font-medium text-gray-700">Nombre Cliente</label>
+                        <input type="text" name="clientName" id="clientName" required class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
                     </div>
                     <div>
-                        <label for="vehiclePlate" class="block text-sm font-medium text-gray-700">Placa del Vehículo</label>
-                        <input type="text" name="vehiclePlate" id="vehiclePlate" required class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="ABC-123">
+                        <label for="clientEmail" class="block text-sm font-medium text-gray-700">Email Cliente</label>
+                        <input type="email" name="clientEmail" id="clientEmail" required class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
                     </div>
-                        <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label for="startDate" class="block text-sm font-medium text-gray-700">Fecha de Inicio</label>
-                            <input type="date" name="startDate" id="startDate" required class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                        </div>
-                        <div>
-                            <label for="endDate" class="block text-sm font-medium text-gray-700">Fecha de Fin</label>
-                            <input type="date" name="endDate" id="endDate" required class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                        </div>
+                    <div class="md:col-span-2">
+                        <label for="vehiclePlate" class="block text-sm font-medium text-gray-700">Placa Vehículo</label>
+                        <input type="text" name="vehiclePlate" id="vehiclePlate" required class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md uppercase" placeholder="ABC-123">
                     </div>
-                </div>
+                    <div>
+                        <label for="startDate" class="block text-sm font-medium text-gray-700">Fecha de Inicio</label>
+                        <input type="date" name="startDate" id="startDate" required class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label for="endDate" class="block text-sm font-medium text-gray-700">Fecha de Fin</label>
+                        <input type="date" name="endDate" id="endDate" required class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label for="membership-activo" class="flex items-center cursor-pointer">
+                            <input type="checkbox" name="membership-activo" id="membership-activo" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <span class="ml-2 text-sm font-medium text-gray-700">Mensualidad Activa</span>
+                        </label>
+                    </div>
+                    </div>
                 <div class="px-6 py-4 bg-gray-50 text-right">
                     <button type="button" class="mr-2 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 modal-close">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700">Crear Mensualidad</button>
+                    <button type="submit" id="membership-submit-button" class="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">Crear Mensualidad</button>
                 </div>
             </form>
         </div>

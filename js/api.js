@@ -1,55 +1,114 @@
-const BASE = 'http://10.0.11.2:5127/api';
+// Define la URL base de tu API de backend
+const BASE_URL = 'http://localhost:5127/api';
 
-async function request(path, options = {}) {
-    const url = `${BASE}${path}`;
-    try {
-        console.log('API Request:', { url, method: options.method, body: options.body });
-        const res = await fetch(url, {
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                ...options.headers
+/**
+ * Función auxiliar para realizar todas las peticiones a la API.
+ * Maneja la configuración, el envío de JSON y la gestión de errores.
+ */
+async function request(endpoint, options = {}) {
+    const url = `${BASE_URL}${endpoint}`;
+
+    const config = {
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+        },
+        ...options,
+    };
+
+    // Si hay un cuerpo (body), lo convertimos a JSON
+    if (options.body) {
+        config.body = JSON.stringify(options.body);
+    }
+
+    try {
+        const response = await fetch(url, config);
+
+        // Si la respuesta no es OK (ej: 404, 500)
+        if (!response.ok) {
+            // Leemos el cuerpo de la respuesta UNA SOLA VEZ como texto.
+            const errorText = await response.text();
+            let errorMessage = errorText;
+            try {
+                // Intentamos interpretar el texto como JSON para obtener un mensaje más claro.
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.message || errorData.title || JSON.stringify(errorData);
+            } catch (e) {
+                // Si no es JSON, usamos el texto del error tal cual.
             }
-        });
-        
-        const text = await res.text();
-        console.log('API Response:', { status: res.status, text });
-        
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status} ${res.statusText} - ${text}`);
-        }
-        
-        if (res.status === 204) return null;
-        
-        try {
-            return text ? JSON.parse(text) : null;
-        } catch (e) {
-            console.warn('Response no es JSON válido:', text);
-            return null;
-        }
-    } catch (err) {
-        console.error('API request error', { url, options, err });
-        throw err;
-    }
+            throw new Error(errorMessage);
+        }
+
+        // Si la respuesta es 204 (No Content), no hay cuerpo que parsear
+        if (response.status === 204) {
+            return null;
+        }
+
+        // Intenta parsear la respuesta como JSON
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            return await response.json();
+        }
+        
+        // Devuelve como texto si no es JSON
+        return await response.text();
+
+    } catch (error) {
+        console.error(`Error en la petición API [${options.method || 'GET'} ${endpoint}]:`, error.message);
+        throw error; // Propaga el error para que el frontend pueda manejarlo
+    }
 }
 
-export async function getOperators() {
-    return request('/Operadores');
-}
+// --- API de Operadores ---
 
-export async function getOperator(id) {
-    return request(`/Operadores/${id}`);
-}
+export const getOperators = () => request('/Operadores');
+export const getOperator = (id) => request(`/Operadores/${id}`);
+export const createOperator = (data) => request('/Operadores', { method: 'POST', body: data });
+export const updateOperator = (id, data) => request(`/Operadores/${id}`, { method: 'PUT', body: data });
+export const deleteOperator = (id) => request(`/Operadores/${id}`, { method: 'DELETE' });
 
-export async function createOperator(operator) {
-    return request('/Operadores', { method: 'POST', body: JSON.stringify(operator) });
-}
+// --- API de Mensualidades ---
 
-export async function updateOperator(id, operator) {
-    return request(`/Operadores/${id}`, { method: 'PUT', body: JSON.stringify(operator) });
-}
+export const getMemberships = () => request('/Mensualidades');
+export const getMembership = (id) => request(`/Mensualidades/${id}`);
+export const createMembership = (data) => request('/Mensualidades', { method: 'POST', body: data });
+export const updateMembership = (id, data) => request(`/Mensualidades/${id}`, { method: 'PUT', body: data });
+export const deleteMembership = (id) => request(`/Mensualidades/${id}`, { method: 'DELETE' });
 
-export async function deleteOperator(id) {
-    return request(`/Operadores/${id}`, { method: 'DELETE' });
-}
+// --- API de Notificaciones y Tareas ---
+
+export const checkExpiringMembershipsApi = () => request('/Notificaciones/enviar-vencimientos', { method: 'POST' });
+export const sendMembershipCreationEmail = (idMensualidad) => request(`/Notificaciones/enviar-creacion/${idMensualidad}`, { method: 'POST' });
+
+// --- API de Dashboard ---
+
+export const getDashboardData = () => request('/Dashboard');
+
+// --- API de Tarifas ---
+
+export const getTariffs = () => request('/Tarifas');
+export const getActiveTariff = () => request('/Tarifas/activa');
+export const getTariff = (id) => request(`/Tarifas/${id}`);
+export const updateTariff = (id, data) => request(`/Tarifas/${id}`, { method: 'PUT', body: data });
+
+// --- API de Tickets ---
+
+// NOTA: Estas funciones se asumen basadas en la necesidad del frontend.
+// Asegúrate de que tu backend tenga estos endpoints.
+export const getTickets = () => request('/Tickets');
+export const deleteTicket = (id) => request(`/Tickets/${id}`, { method: 'DELETE' });
+
+// --- API de Pagos ---
+// NOTA: Estas funciones se asumen basadas en la necesidad del frontend.
+export const getPayments = () => request('/Pagos');
+export const deletePago = (id) => request(`/Pagos/${id}`, { method: 'DELETE' });
+
+
+// --- API de Reportes de Tickets ---
+
+export const getTicketsIngresos = () => request('/Tickets/ingresos');
+export const getTicketsOcupacion = () => request('/Tickets/ocupacion');
+export const getTicketsComparativa = () => request('/Tickets/comparativa');
+export const exportTicketsCSV = () => request('/Tickets/export/csv');
+export const exportTicketsExcel = () => request('/Tickets/export/excel');
+
