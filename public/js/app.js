@@ -381,126 +381,204 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- LÓGICA DE MENSUALIDADES ---
-    async function handleMembershipsView() {
-        const tbody = document.querySelector('#memberships-table tbody');
-        if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">Cargando mensualidades...</td></tr>';
+// --- FUNCIÓN AUXILIAR REUTILIZABLE PARA CREAR UNA FILA DE MENSUALIDAD ---
+// Esta función crea un elemento <tr> con todos sus listeners, evitando código duplicado.
+function createMembershipRowElement(mem) {
+    const tr = document.createElement('tr');
+    tr.className = 'border-b hover:bg-gray-50';
+    tr.id = `membership-row-${mem.id_mensualidad}`; // Añadimos un ID para futuras actualizaciones
+
+    const startDate = new Date(mem.fecha_inicio).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
+    const endDate = new Date(mem.fecha_fin).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
+    
+    const statusToggleHTML = `
+        <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" value="" class="sr-only peer membership-status-toggle" data-id="${mem.id_mensualidad}" ${mem.activa ? 'checked' : ''}>
+            <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-indigo-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+            <span class="ml-3 text-sm font-medium text-gray-900">${mem.activa ? 'Activa' : 'Inactiva'}</span>
+        </label>
+    `;
+
+    tr.innerHTML = `
+        <td class="p-4">
+            <div class="font-medium text-gray-900">${mem.nombre_cliente}</div>
+            <div class="text-sm text-gray-500">${mem.correo}</div>
+        </td>
+        <td class="p-4 font-mono text-gray-800">${mem.placa}</td>
+        <td class="p-4">${startDate}</td>
+        <td class="p-4">${endDate}</td>
+        <td class="p-4">${statusToggleHTML}</td>
+        <td class="p-4 text-right">
+            <button class="edit-membership mr-2 px-3 py-1 bg-yellow-400 text-yellow-900 font-semibold rounded hover:bg-yellow-500 transition" data-id="${mem.id_mensualidad}">Editar</button>
+            <button class="delete-membership px-3 py-1 bg-red-600 text-white font-semibold rounded hover:bg-red-700 transition" data-id="${mem.id_mensualidad}">Eliminar</button>
+        </td>
+    `;
+    
+    // --- Adjuntamos los listeners directamente a los elementos de la nueva fila ---
+
+    tr.querySelector('.membership-status-toggle').addEventListener('change', async (e) => {
+        const id = e.target.dataset.id;
+        const newStatus = e.target.checked;
+        const span = e.target.nextElementSibling.nextElementSibling;
+        span.textContent = newStatus ? 'Activa' : 'Inactiva';
+        try {
+            const membership = await api.getMembership(id);
+            const updatedData = { ...membership, id_mensualidad: parseInt(id), activa: newStatus };
+            await api.updateMembership(id, updatedData);
+        } catch (err) {
+            console.error('Error al cambiar estado:', err);
+            e.target.checked = !newStatus;
+            span.textContent = !newStatus ? 'Activa' : 'Inactiva';
+            alert('No se pudo cambiar el estado de la mensualidad.');
+        }
+    });
+
+    tr.querySelector('.edit-membership').addEventListener('click', async () => {
+        const id = tr.querySelector('.edit-membership').dataset.id;
+        try {
+            const data = await api.getMembership(id);
+            const form = document.getElementById('membership-form');
+            document.getElementById('membership-modal-title').textContent = 'Editar Mensualidad';
+            document.getElementById('membership-submit-button').textContent = 'Guardar Cambios';
+            form.querySelector('#clientName').value = data.nombre_cliente || '';
+            form.querySelector('#clientEmail').value = data.correo || '';
+            form.querySelector('#vehiclePlate').value = data.placa || '';
+            form.querySelector('#startDate').value = data.fecha_inicio.split('T')[0];
+            form.querySelector('#endDate').value = data.fecha_fin.split('T')[0];
+            const statusContainer = form.querySelector('#membership-activo').parentElement.parentElement;
+            if(statusContainer) statusContainer.style.display = 'none';
+            window.editingMembershipId = id;
+            openModal('modal-membership');
+        } catch (err) {
+            console.error('Error obteniendo mensualidad:', err);
+            alert('No se pudo cargar la mensualidad para editar.');
+        }
+    });
+
+    tr.querySelector('.delete-membership').addEventListener('click', async () => {
+        const id = tr.querySelector('.delete-membership').dataset.id;
+        if (!confirm('¿Estás seguro de que quieres INACTIVAR esta mensualidad?')) return;
+        try {
+            const membership = await api.getMembership(id);
+            const updatedData = { ...membership, id_mensualidad: parseInt(id), activa: false };
+            await api.updateMembership(id, updatedData);
+            // OPTIMIZACIÓN: En lugar de recargar todo, solo actualizamos el switch de la fila
+            const checkbox = tr.querySelector('.membership-status-toggle');
+            if (checkbox) checkbox.checked = false;
+            const span = checkbox.nextElementSibling.nextElementSibling;
+            if (span) span.textContent = 'Inactiva';
+        } catch (err) {
+            console.error('Error al inactivar mensualidad:', err);
+            alert('No se pudo inactivar la mensualidad.');
+        }
+    });
+
+    return tr;
+}
+
+
+// --- LÓGICA DE MENSUALIDADES (AHORA MÁS LIMPIA) ---
+async function handleMembershipsView() {
+    const tbody = document.querySelector('#memberships-table tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">Cargando mensualidades...</td></tr>';
+
+    try {
+        const memberships = await api.getMemberships();
+        tbody.innerHTML = ''; // Limpiamos la tabla
+
+        if (!memberships || memberships.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">No hay mensualidades registradas.</td></tr>';
+            return;
+        }
+
+        // Usamos la función auxiliar para crear y añadir cada fila
+        memberships.forEach(mem => {
+            const newRow = createMembershipRowElement(mem);
+            tbody.appendChild(newRow);
+        });
+
+    } catch (err) {
+        console.error('Error cargando mensualidades:', err);
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-500">Error al cargar las mensualidades.</td></tr>';
+    }
+}
+
+
+// --- MANEJADOR DEL FORMULARIO DE MENSUALIDAD (OPTIMIZADO) ---
+// Debes asegurarte de que este código se ejecuta dentro de tu listener 'DOMContentLoaded'
+
+const membershipForm2 = document.getElementById('membership-form');
+if (membershipForm2) {
+    membershipForm2.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitButton = document.getElementById('membership-submit-button');
+        const originalButtonText = submitButton.textContent;
+        submitButton.disabled = true;
+        submitButton.textContent = 'Guardando...';
 
         try {
-            const memberships = await api.getMemberships();
-            tbody.innerHTML = '';
+            if (window.editingMembershipId) {
+                // Lógica para EDITAR: aquí podemos permitirnos recargar la tabla completa
+                const originalMembership = await api.getMembership(window.editingMembershipId);
+                const membershipData = {
+                    ...originalMembership,
+                    nombre_cliente: membershipForm2.querySelector('#clientName').value,
+                    correo: membershipForm2.querySelector('#clientEmail').value,
+                    placa: membershipForm2.querySelector('#vehiclePlate').value.toUpperCase(),
+                    fecha_inicio: membershipForm2.querySelector('#startDate').value,
+                    fecha_fin: membershipForm2.querySelector('#endDate').value,
+                };
+                await api.updateMembership(window.editingMembershipId, membershipData);
+                closeModal('modal-membership');
+                await handleMembershipsView(); // Recargamos para reflejar cambios
 
-            if (!memberships || memberships.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">No hay mensualidades registradas.</td></tr>';
-                return;
-            }
-
-            memberships.forEach(mem => {
-                const tr = document.createElement('tr');
-                tr.className = 'border-b hover:bg-gray-50';
-
-                const startDate = new Date(mem.fecha_inicio).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
-                const endDate = new Date(mem.fecha_fin).toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
+            } else {
+                // Lógica para CREAR: aquí aplicamos la ACTUALIZACIÓN OPTIMISTA
+                const membershipData = {
+                    nombre_cliente: membershipForm2.querySelector('#clientName').value,
+                    correo: membershipForm2.querySelector('#clientEmail').value,
+                    placa: membershipForm2.querySelector('#vehiclePlate').value.toUpperCase(),
+                    fecha_inicio: membershipForm2.querySelector('#startDate').value,
+                    fecha_fin: membershipForm2.querySelector('#endDate').value,
+                    activa: membershipForm2.querySelector('#membership-activo').checked
+                };
                 
-                const statusToggleHTML = `
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" value="" class="sr-only peer membership-status-toggle" data-id="${mem.id_mensualidad}" ${mem.activa ? 'checked' : ''}>
-                        <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-indigo-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                        <span class="ml-3 text-sm font-medium text-gray-900">${mem.activa ? 'Activa' : 'Inactiva'}</span>
-                    </label>
-                `;
+                // 1. Creamos la mensualidad y esperamos la respuesta con el nuevo objeto
+                const nuevaMensualidad = await api.createMembership(membershipData);
 
-                tr.innerHTML = `
-                    <td class="p-4">
-                        <div class="font-medium text-gray-900">${mem.nombre_cliente}</div>
-                        <div class="text-sm text-gray-500">${mem.correo}</div>
-                    </td>
-                    <td class="p-4 font-mono text-gray-800">${mem.placa}</td>
-                    <td class="p-4">${startDate}</td>
-                    <td class="p-4">${endDate}</td>
-                    <td class="p-4">${statusToggleHTML}</td>
-                    <td class="p-4 text-right">
-                        <button class="edit-membership mr-2 px-3 py-1 bg-yellow-400 text-yellow-900 font-semibold rounded hover:bg-yellow-500 transition" data-id="${mem.id_mensualidad}">Editar</button>
-                        <button class="delete-membership px-3 py-1 bg-red-600 text-white font-semibold rounded hover:bg-red-700 transition" data-id="${mem.id_mensualidad}">Eliminar</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+                // 2. Enviamos el correo en segundo plano (SIN 'await')
+                if (nuevaMensualidad && nuevaMensualidad.id_mensualidad) {
+                    api.sendMembershipCreationEmail(nuevaMensualidad.id_mensualidad);
+                }
 
-            tbody.querySelectorAll('.membership-status-toggle').forEach(toggle => {
-                toggle.addEventListener('change', async (e) => {
-                    const id = e.target.dataset.id;
-                    const newStatus = e.target.checked;
-                    const span = e.target.nextElementSibling.nextElementSibling;
-                    span.textContent = newStatus ? 'Activa' : 'Inactiva';
+                // 3. Cerramos el modal inmediatamente para que la UI se sienta rápida
+                closeModal('modal-membership');
 
-                    try {
-                        const membership = await api.getMembership(id);
-                        const updatedData = {
-                            ...membership,
-                            id_mensualidad: parseInt(id),
-                            activa: newStatus
-                        };
-                        await api.updateMembership(id, updatedData);
-                    } catch (err) {
-                        console.error('Error al cambiar estado de la mensualidad:', err);
-                        e.target.checked = !newStatus;
-                        span.textContent = !newStatus ? 'Activa' : 'Inactiva';
-                        alert('No se pudo cambiar el estado de la mensualidad.');
-                    }
-                });
-            });
+                // 4. Actualizamos la tabla en el frontend SIN llamar al servidor de nuevo
+                const tbody = document.querySelector('#memberships-table tbody');
+                
+                // Si la tabla tenía el mensaje de "No hay mensualidades", lo borramos
+                const emptyRow = tbody.querySelector('td[colspan="6"]');
+                if (emptyRow) {
+                    tbody.innerHTML = '';
+                }
 
-            tbody.querySelectorAll('.edit-membership').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    const id = btn.dataset.id;
-                    try {
-                        const data = await api.getMembership(id);
-                        const form = document.getElementById('membership-form');
+                // 5. Creamos el elemento de la nueva fila con nuestra función auxiliar
+                const newRow = createMembershipRowElement(nuevaMensualidad);
 
-                        document.getElementById('membership-modal-title').textContent = 'Editar Mensualidad';
-                        document.getElementById('membership-submit-button').textContent = 'Guardar Cambios';
-
-                        form.querySelector('#clientName').value = data.nombre_cliente || '';
-                        form.querySelector('#clientEmail').value = data.correo || '';
-                        form.querySelector('#vehiclePlate').value = data.placa || '';
-                        form.querySelector('#startDate').value = data.fecha_inicio.split('T')[0];
-                        form.querySelector('#endDate').value = data.fecha_fin.split('T')[0];
-                        
-                        const statusContainer = form.querySelector('#membership-activo').parentElement.parentElement;
-                        if(statusContainer) statusContainer.style.display = 'none';
-
-                        window.editingMembershipId = id;
-                        openModal('modal-membership');
-                    } catch (err) {
-                        console.error('Error obteniendo mensualidad:', err);
-                        alert('No se pudo cargar la mensualidad para editar.');
-                    }
-                });
-            });
-
-            tbody.querySelectorAll('.delete-membership').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    const id = btn.dataset.id;
-                    if (!confirm('¿Estás seguro de que quieres INACTIVAR esta mensualidad?')) return;
-                    try {
-                        const membership = await api.getMembership(id);
-                        const updatedData = { ...membership, id_mensualidad: parseInt(id), activa: false };
-                        await api.updateMembership(id, updatedData);
-                        await handleMembershipsView();
-                    } catch (err) {
-                        console.error('Error al inactivar mensualidad:', err);
-                        alert('No se pudo inactivar la mensualidad.');
-                    }
-                });
-            });
-
-        } catch (err) {
-            console.error('Error cargando mensualidades:', err);
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-500">Error al cargar las mensualidades.</td></tr>';
+                // 6. Añadimos la fila al principio de la tabla para que sea visible al instante
+                tbody.prepend(newRow);
+            }
+        } catch (error) {
+            console.error('Error al guardar mensualidad:', error);
+            alert(`Error al guardar la mensualidad: ${error.message}`);
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = originalButtonText;
         }
-    }
+    });
+}
 
     // --- LÓGICA DE TARIFAS ---
     async function handleTariffsView() {
@@ -743,7 +821,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     };
                     const nuevaMensualidad = await api.createMembership(membershipData);
                     if (nuevaMensualidad && nuevaMensualidad.id_mensualidad) {
-                        await api.sendMembershipCreationEmail(nuevaMensualidad.id_mensualidad);
+                        api.sendMembershipCreationEmail(nuevaMensualidad.id_mensualidad);
                     }
                 }
                 closeModal('modal-membership');
