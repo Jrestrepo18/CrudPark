@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:5127/api';
+const BASE_URL = 'https://crudpark-backend.onrender.com/api';
 
 async function request(endpoint, options = {}) {
     const url = `${BASE_URL}${endpoint}`;
